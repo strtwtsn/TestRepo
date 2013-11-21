@@ -1,0 +1,44 @@
+#!/bin/bash
+for i in `cat no_dups.txt`
+do
+OUTPUT=$(geoiplookup -f /usr/share/GeoIP/GeoIP.dat $i)
+echo $i,$OUTPUT >> located.txt
+done
+sed -i 's/,GeoIP Country Edition: / ,/g' located.txt
+
+while read line
+do
+        for word in $line
+        do
+                # if word is ip address change to hostname
+                if [[ $word =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]
+                then
+                        # check if ip address is correct
+                        OIFS=$IFS
+                        IFS="."
+                        ip=($word)
+                        IFS=$OIFS
+                       if [[ ${ip[0]} -le 255 && ${ip[1]} -le 255 && ${ip[2]} -le 255 && ${ip[3]} -le 255 ]]
+                        then
+                                echo -n `geoiplookup -f /usr/share/GeoIP/GeoIPOrg.dat $word`
+                                echo -n " "
+                        else
+                                echo -n "$word"
+                                echo -n " "
+                        fi
+                # else print word
+                else
+                        echo -n $word
+                        echo -n " "
+                fi
+        done
+        # new line
+        echo
+done < located.txt > outputfile.txt
+
+
+sed -i 's/\GeoIP Organization Edition: //g' outputfile.txt
+
+sort -u outputfile.txt > resolved_ip
+
+sed -i '/IP Address not found/d' resolved_ip
